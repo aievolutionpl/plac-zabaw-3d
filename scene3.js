@@ -11,7 +11,7 @@ function ground(u,v){ // piksel zdjęcia -> punkt na ziemi (x,z)
  const t=-CAMY/d.y;return new THREE.Vector3(d.x*t,0,d.z*t)}
 const mpp=(v)=>{const a=ground(500,v),b=ground(501,v);return a.distanceTo(b)}; // metry na piksel na wysokości v
 
-const R=new THREE.WebGLRenderer({antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));R.setSize(innerWidth,innerHeight);
+const R=new THREE.WebGLRenderer({antialias:true});const MOB=matchMedia('(pointer:coarse)').matches||innerWidth<800;R.setPixelRatio(Math.min(devicePixelRatio,MOB?1.5:2));R.setSize(innerWidth,innerHeight);
 R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.05;
 document.body.prepend(R.domElement);
 const S=new THREE.Scene();
@@ -19,15 +19,16 @@ const S=new THREE.Scene();
  gr.addColorStop(0,'#4f9fe0');gr.addColorStop(.6,'#9fd0f2');gr.addColorStop(1,'#e2f1fb');g.fillStyle=gr;g.fillRect(0,0,4,512);
  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;S.background=t}
 S.fog=new THREE.Fog(0xcfe3ee,60,200);
-const C=new THREE.PerspectiveCamera(VF,innerWidth/innerHeight,.5,400);
+const fitFov=()=>{const a=innerWidth/innerHeight;return a<IW/IH?THREE.MathUtils.radToDeg(2*Math.atan(Math.tan(THREE.MathUtils.degToRad(VF/2))*(IW/IH)/a)):VF};
+const C=new THREE.PerspectiveCamera(fitFov(),innerWidth/innerHeight,.5,400);
 const Q=new URLSearchParams(location.search);
 C.position.copy(camPos);C.rotation.set(-pitch,0,0,'YXZ');
 const tgt=new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(1,0,0),-pitch).multiplyScalar(18).add(camPos);
-const O=new OrbitControls(C,R.domElement);O.target.copy(tgt);O.enableDamping=true;O.maxPolarAngle=1.5;O.minDistance=3;O.maxDistance=70;
+const O=new OrbitControls(C,R.domElement);O.target.copy(tgt);O.enableDamping=true;O.maxPolarAngle=1.5;O.minDistance=3;O.maxDistance=70;O.enablePan=false;O.rotateSpeed=MOB?.7:1;
 if(!Q.get('free')){O.minAzimuthAngle=-1.1;O.maxAzimuthAngle=1.1}
 O.update();O.autoRotateSpeed=.5;document.getElementById('a').onclick=()=>O.autoRotate=!O.autoRotate;
 S.add(new THREE.HemisphereLight(0xdcecff,0x7aa860,1.3));
-const sun=new THREE.DirectionalLight(0xfff1d6,3.2);sun.position.set(-14,26,2);sun.castShadow=true;sun.shadow.mapSize.set(4096,4096);
+const sun=new THREE.DirectionalLight(0xfff1d6,3.2);sun.position.set(-14,26,2);sun.castShadow=true;sun.shadow.mapSize.set(MOB?2048:4096,MOB?2048:4096);
 Object.assign(sun.shadow.camera,{left:-45,right:45,top:10,bottom:-60,near:1,far:120});sun.shadow.bias=-.0004;sun.shadow.normalBias=.04;
 sun.target.position.set(0,0,-18);S.add(sun,sun.target);
 
@@ -46,11 +47,11 @@ const GREY=0xd5d9df,BLUE=0x1f6fe0,ORG=0xff7a12,RED=0xc4202a,YEL=0xffcc1a,GRN=0x2
 const POLY=await (await fetch('models/polys.json')).json();
 function flat(poly,col,y,r=.9){const sh=new THREE.Shape();let first=1;
  for(const [u,v] of poly){const g=ground(u,Math.max(v,215));first?(sh.moveTo(g.x,-g.z),first=0):sh.lineTo(g.x,-g.z)}
- const m=add(new THREE.ShapeGeometry(sh),M(col,r),0,y,0);m.rotation.x=-Math.PI/2;m.castShadow=false;m.material=m.material.clone();m.material.polygonOffset=true;m.material.polygonOffsetFactor=-y*100;m.material.polygonOffsetUnits=-y*100;return m}
-for(const p of POLY.sand)flat(p,0xddbea0,.02);
-for(const p of POLY.path)flat(p,0x77737a,.03);
-for(const p of POLY.blue)flat(p,0x1f6ea5,.04);
-for(const p of POLY.orange)flat(p,0xe77d41,.05);
+ const m=add(new THREE.ShapeGeometry(sh),M(col,r),0,y,0);m.rotation.x=-Math.PI/2;m.castShadow=false;m.material=m.material.clone();m.material.side=THREE.DoubleSide;m.material.polygonOffset=true;m.material.polygonOffsetFactor=-y*100;m.material.polygonOffsetUnits=-y*100;return m}
+{const GJ=await (await fetch('models/ground.json')).json();
+ const tx=await new THREE.TextureLoader().loadAsync('models/ground.jpg');tx.colorSpace=THREE.SRGBColorSpace;tx.anisotropy=16;
+ const gp=add(new THREE.PlaneGeometry(GJ.x1-GJ.x0,GJ.z1-GJ.z0),new THREE.MeshStandardMaterial({map:tx,roughness:.95}),(GJ.x0+GJ.x1)/2,.02,(GJ.z0+GJ.z1)/2);
+ gp.rotation.x=-Math.PI/2;gp.castShadow=false}
 
 // ===== elementy =====
 const place=(g,u,v,ry=0,sc=1)=>{const p=ground(u,v);g.position.set(p.x,0,p.z);g.rotation.y=ry;g.scale.setScalar(sc);S.add(g);return g};
@@ -127,6 +128,6 @@ function winTex(tint){const c=document.createElement('canvas');c.width=128;c.hei
 const tints=['#e8e0cf','#d3d6d9','#cdbfa8','#e3dcd0','#c9ced3'];
 for(let i=0;i<9;i++){const w=16+rnd()*10,h=24+rnd()*20;const t=winTex(tints[i%5]);t.repeat.set(Math.round(w/7),Math.round(h/14));
  const b=add(new THREE.BoxGeometry(w,h,12),new THREE.MeshStandardMaterial({map:t,roughness:.9}),-70+i*18+rnd()*3,h/2,-95-rnd()*10);b.castShadow=false}
-addEventListener('resize',()=>{C.aspect=innerWidth/innerHeight;C.updateProjectionMatrix();R.setSize(innerWidth,innerHeight)});
+addEventListener('resize',()=>{C.aspect=innerWidth/innerHeight;C.fov=fitFov();C.updateProjectionMatrix();R.setSize(innerWidth,innerHeight)});
 const clk=new THREE.Clock();
 R.setAnimationLoop(()=>{const t=clk.getElapsedTime();spin.rotation.y=t*.7;springs.forEach((s,i)=>s.rotation.z=Math.sin(t*2+i*1.3)*.22);O.update();R.render(S,C)});
