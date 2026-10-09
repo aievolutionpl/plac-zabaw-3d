@@ -11,8 +11,9 @@ const S=new THREE.Scene();
  gr.addColorStop(0,'#5aa9e6');gr.addColorStop(.55,'#9ccff2');gr.addColorStop(1,'#dff0fa');g.fillStyle=gr;g.fillRect(0,0,4,512);
  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;S.background=t;}
 S.fog=new THREE.Fog(0xcfe6f5,90,260);
-const C=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.1,600);C.position.set(17,15,30);
-const O=new OrbitControls(C,R.domElement);O.enableDamping=true;O.maxPolarAngle=1.48;O.minDistance=6;O.maxDistance=90;O.target.set(0,1,2);O.autoRotateSpeed=.5;
+const Q=new URLSearchParams(location.search);const cp=(Q.get('cam')||'4,10,36,2,1.5,-1,40').split(',').map(Number);
+const C=new THREE.PerspectiveCamera(cp[6],innerWidth/innerHeight,.1,600);C.position.set(cp[0],cp[1],cp[2]);
+const O=new OrbitControls(C,R.domElement);O.enableDamping=true;O.maxPolarAngle=1.48;O.minDistance=6;O.maxDistance=90;O.target.set(cp[3],cp[4],cp[5]);O.autoRotateSpeed=.5;
 document.getElementById('a').onclick=()=>O.autoRotate=!O.autoRotate;
 S.add(new THREE.HemisphereLight(0xdfefff,0x7aa860,1.25));
 const sun=new THREE.DirectionalLight(0xfff3dc,3.2);sun.position.set(-22,38,16);sun.castShadow=true;sun.shadow.mapSize.set(4096,4096);
